@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Análisis de landings MEPER · Estado actual y A/B</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&family=Hanken+Grotesk:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  --bg:#f6f8fb; --surface:#ffffff; --surface-2:#eef2f7; --border:#e4e9f0;
+  --ink:#172033; --ink-2:#5b6b82; --accent:#2e6090; --accent-soft:#e3edf6;
+  --tofu:#78b3d9; --mofu:#4a90c2; --bofu:#22406b;
+  --bar:#2e6090; --track:#e4e9f0;
+  --hero:#0f172a; --hero-2:#16213a; --hero-ink:#e8eef6; --hero-ink-2:#9fb0c7; --cielo:#5aaed4;
+  --ok:#1f7a4d; --ok-soft:#e3f3ea; --warn:#b4561f; --warn-soft:#fbeee3;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0a0e14; --surface:#12171f; --surface-2:#18202b; --border:#243041;
+    --ink:#e6ebf2; --ink-2:#98a6ba; --accent:#5aaed4; --accent-soft:#16283a;
+    --tofu:#9ccbe8; --mofu:#5aaed4; --bofu:#3f7fb3;
+    --bar:#5aaed4; --track:#243041;
+    --hero:#060a10; --hero-2:#101a2c;
+    --ok:#6fd3a0; --ok-soft:#12291d; --warn:#e8925a; --warn-soft:#2a1a10;
+  }
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{background:var(--bg);color:var(--ink);font:400 16px/1.6 "Hanken Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif;margin:0}
+h1,h2,h3,h4{font-family:Archivo,"Hanken Grotesk",system-ui,sans-serif;text-wrap:balance;margin:0}
+p{margin:0}
+ul{margin:0;padding:0;list-style:none}
+.wrap{max-width:1120px;margin:0 auto;padding-inline:16px}
+@media (min-width:720px){.wrap{padding-inline:32px}}
+.eyebrow{font:700 .74rem/1 "Hanken Grotesk",sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+.muted{color:var(--ink-2)}
+.small{font-size:.88rem}
+
+/* NAV */
+.nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:10;background:color-mix(in srgb,var(--hero) 94%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,255,255,.06)}
+.nav .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-block:12px}
+.brand{font:800 1rem/1 Archivo,sans-serif;color:var(--hero-ink);letter-spacing:.02em;white-space:nowrap}
+.brand span{color:var(--cielo);font-weight:600}
+.nav ul{list-style:none;margin:0;padding:0;display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
+.nav a{display:block;color:var(--hero-ink-2);text-decoration:none;font-weight:600;font-size:.85rem;padding:6px 12px;border-radius:999px;white-space:nowrap}
+.nav a:hover,.nav a:focus-visible{color:#fff;background:rgba(255,255,255,.08);outline:none}
+@media (max-width:640px){.brand{display:none}}
+
+/* HERO */
+.hero{background:radial-gradient(120% 90% at 85% 10%,var(--hero-2),var(--hero) 60%);color:var(--hero-ink);padding-block:56px 64px}
+.hero .wrap{display:grid;gap:40px;align-items:center;grid-template-columns:1fr}
+@media (min-width:920px){.hero .wrap{grid-template-columns:1.05fr 1fr}}
+.hero .eyebrow{color:var(--cielo)}
+.hero h1{font-size:clamp(2.1rem,5vw,3.6rem);line-height:1.04;font-weight:900;letter-spacing:-.03em;margin-top:14px;color:#fff}
+.hero h1 em{font-style:normal;color:var(--cielo)}
+.hero .lead{font-size:1.1rem;color:var(--hero-ink-2);max-width:56ch;margin-top:18px}
+.hero-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;margin-top:32px;background:rgba(255,255,255,.1);border-radius:14px;overflow:hidden;max-width:520px}
+.hero-stats div{background:var(--hero);padding:14px 16px}
+.hero-stats b{display:block;font:800 1.9rem/1 Archivo,sans-serif;color:#fff;font-variant-numeric:tabular-nums}
+.hero-stats span{font-size:.8rem;color:var(--hero-ink-2)}
+.hero-cta{display:flex;flex-wrap:wrap;gap:10px;margin-top:28px}
+.btn{display:inline-block;font:700 .95rem/1 "Hanken Grotesk",sans-serif;padding:13px 20px;border-radius:999px;text-decoration:none}
+.btn.p{background:var(--cielo);color:#08131f}
+.btn.s{color:#fff;border:1px solid rgba(255,255,255,.25)}
+.btn:focus-visible{outline:2px solid #fff;outline-offset:3px}
+.ab-svg{width:100%;max-width:540px;height:auto;justify-self:center;display:block}
+
+/* SECCIONES */
+section.blk{padding-block:72px 16px;scroll-margin-top:64px}
+.sec-head{display:grid;gap:10px;margin-bottom:28px;max-width:780px}
+.sec-head h2{font-size:clamp(1.7rem,3.4vw,2.4rem);font-weight:800;line-height:1.1;letter-spacing:-.02em}
+.sec-head p{font-size:1.05rem;color:var(--ink-2);max-width:68ch}
+
+/* FICHAS DE LANDING */
+.landing{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:18px}
+.l-top{display:grid;gap:12px;padding:20px;background:var(--hero);color:var(--hero-ink)}
+@media (min-width:860px){.l-top{grid-template-columns:1fr auto;align-items:center}}
+.l-top .where{font:700 .72rem/1 "Hanken Grotesk",sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--cielo)}
+.l-top h3{font-size:1.22rem;color:#fff;margin-top:8px;letter-spacing:-.01em}
+.l-top .url{font-size:.82rem;color:var(--hero-ink-2);margin-top:6px;display:block}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:600 .8rem/1 "Hanken Grotesk",sans-serif;padding:7px 10px;border-radius:999px;background:var(--surface-2);color:var(--ink);white-space:nowrap}
+.chip.main{background:var(--accent);color:#fff}
+.l-top .chip{background:rgba(255,255,255,.1);color:#fff}
+.l-top .chip.main{background:var(--cielo);color:#08131f}
+.l-body{display:grid}
+@media (min-width:860px){.l-body{grid-template-columns:1fr}}
+.mb{display:grid;gap:8px;padding:18px 20px;border-top:1px solid var(--border)}
+@media (min-width:760px){.mb{grid-template-columns:170px 1fr;gap:18px}}
+.mb .lbl{font:700 .72rem/1.3 "Hanken Grotesk",sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2);padding-top:3px}
+.mb ul{display:grid;gap:8px}
+.mb li{font-size:.93rem;padding-left:26px;position:relative;line-height:1.5}
+.mb li::before{position:absolute;left:0;top:0;font-weight:700}
+.mb li.ok::before{content:"✓";color:var(--ok)}
+.mb li.warn::before{content:"⚠";color:var(--warn)}
+.mb li strong{font-weight:700}
+.mb code{font-size:.85em;background:var(--surface-2);padding:2px 6px;border-radius:6px}
+
+/* TABLA COMPARATIVA */
+.cmp-wrap{overflow-x:auto;background:var(--surface);border:1px solid var(--border);border-radius:16px}
+.cmp{width:100%;min-width:560px;border-collapse:collapse;font-size:.92rem}
+.cmp th,.cmp td{padding:12px 16px;text-align:left;border-bottom:1px solid var(--border)}
+.cmp thead th{font:700 .72rem/1.2 "Hanken Grotesk",sans-serif;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-2);background:var(--surface-2)}
+.cmp tbody th{font-weight:700;font-size:.88rem;color:var(--ink-2);width:30%}
+.cmp td{font-variant-numeric:tabular-nums}
+.cmp tr:last-child th,.cmp tr:last-child td{border-bottom:none}
+.cmp .bad{color:var(--warn);font-weight:600}
+.cmp .good{color:var(--ok);font-weight:600}
+
+/* A/B */
+.pair{margin-bottom:26px;background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden}
+.pair-head{display:grid;gap:8px;padding:20px 22px;background:var(--accent-soft);border-bottom:1px solid var(--border)}
+.pair-head .n{font:800 .78rem/1 Archivo,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.pair-head h3{font-size:1.2rem}
+.pair-head p{font-size:.94rem;color:var(--ink-2);max-width:74ch}
+.ab{display:grid;gap:0;grid-template-columns:1fr}
+@media (min-width:900px){.ab{grid-template-columns:1fr 1fr}}
+.test{padding:20px 22px;display:grid;gap:12px;align-content:start;border-top:1px solid var(--border)}
+@media (min-width:900px){.test+.test{border-top:none;border-left:1px solid var(--border)}.test:first-child{border-top:none}}
+.test header{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+.test .where{font:700 .72rem/1 "Hanken Grotesk",sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
+.test .when{font:700 .78rem/1 "Hanken Grotesk",sans-serif;color:var(--accent)}
+.test .v-title{font-size:1.06rem;line-height:1.3;letter-spacing:-.01em}
+.test .v-title::before{content:"«"}
+.test .v-title::after{content:"»"}
+.test .chips .chip{background:var(--accent-soft);color:var(--accent)}
+.test ol{display:grid;gap:6px;counter-reset:s;list-style:none;margin:0;padding:0}
+.test ol li{counter-increment:s;font-size:.9rem;color:var(--ink);padding-left:26px;position:relative;line-height:1.45}
+.test ol li::before{content:counter(s);position:absolute;left:0;top:1px;width:18px;height:18px;border-radius:6px;background:var(--surface-2);color:var(--ink-2);font:700 .68rem/18px Archivo,sans-serif;text-align:center}
+.test .metric{font-size:.85rem;color:var(--ink-2);background:var(--surface-2);border-radius:10px;padding:10px 12px}
+.test .metric strong{color:var(--ink)}
+.pair-foot{padding:14px 22px;border-top:1px solid var(--border);font-size:.9rem;color:var(--ink-2);display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.pair-foot strong{color:var(--ink)}
+
+/* NOTA */
+.note{margin-top:18px;background:var(--accent-soft);border-radius:12px;padding:14px 18px;font-size:.93rem;max-width:none}
+.note strong{color:var(--accent)}
+.note ol{margin:8px 0 0;padding-left:20px;display:grid;gap:4px}
+
+/* EMBUDO */
+.lanes{display:grid;gap:14px}
+.lane-cols{display:none;grid-template-columns:150px 1.1fr 1.4fr 1.1fr 1fr;gap:0;font:700 .72rem/1.2 "Hanken Grotesk",sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2)}
+.lane-cols span{padding:0 16px}
+.lane{display:grid;grid-template-columns:1fr;background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden}
+.lane>div{padding:18px;border-top:1px solid var(--border)}
+.lane>div:first-child{border-top:none}
+@media (min-width:960px){
+  .lane-cols{display:grid}
+  .lane{grid-template-columns:150px 1.1fr 1.4fr 1.1fr 1fr}
+  .lane>div{border-top:none;border-left:1px solid var(--border)}
+  .lane>div:first-child{border-left:none}
+}
+.lane .stg{display:grid;align-content:center;gap:6px}
+.lane.t .stg{background:var(--tofu);color:#0a1a2c}
+.lane.m .stg{background:var(--mofu);color:#fff}
+.lane.b .stg{background:var(--bofu);color:#fff}
+.stg b{font:900 1.6rem/1 Archivo,sans-serif;letter-spacing:-.02em}
+.stg span{font-size:.85rem;font-weight:600;opacity:.9}
+.lbl-m{display:block;font:700 .7rem/1.2 "Hanken Grotesk",sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2);margin-bottom:8px}
+@media (min-width:960px){.lbl-m{display:none}}
+.lane ul{margin:0;padding-left:18px;font-size:.88rem;display:grid;gap:3px}
+.lane ul li{list-style:disc}
+.lane .chips{margin-top:4px}
+.kpi{font:800 1.5rem/1 Archivo,sans-serif;font-variant-numeric:tabular-nums}
+.kpi-sub{font-size:.85rem;color:var(--ink-2);margin-top:4px}
+code{background:var(--surface-2);padding:2px 6px;border-radius:6px;font-size:.85em}
+.to-crm{display:flex;flex-wrap:wrap;align-items:center;gap:10px;justify-content:center;margin-top:18px;padding:16px;border:1px dashed var(--border);border-radius:16px;font-weight:600}
+.to-crm .arrow{color:var(--ink-2)}
+.to-crm .node{padding:8px 14px;border-radius:10px;background:var(--surface);border:1px solid var(--border);font-size:.9rem}
+.to-crm .node.vx{background:var(--hero);color:#fff;border-color:var(--hero)}
+
+/* GRÁFICO DEL EMBUDO */
+.funnel{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px;margin-bottom:18px}
+.funnel-svg{display:block;width:100%;max-width:620px;margin:0 auto;height:auto}
+.funnel-svg .fx{fill:var(--ink-2)}
+.funnel-svg .fx-b{fill:var(--ink);font-family:Archivo,sans-serif;font-weight:800;font-size:14px}
+.funnel-svg .fx-stroke{fill:none;stroke:var(--ink-2);stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.funnel-svg .pill-bg{fill:var(--surface-2);stroke:var(--border);stroke-width:1}
+.funnel-svg .pill-tx{fill:var(--ink)}
+.funnel-cap{text-align:center;margin-top:10px;max-width:74ch;margin-inline:auto}
+
+@page{size:A4 portrait;margin:12mm}
+@media print{
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .nav,.hero-cta{display:none}
+  section.blk{padding-block:28px 0}
+  .hero{padding-block:28px}
+  .landing,.pair,.test,.cmp-wrap{break-inside:avoid}
+  #ab,#redes{break-before:page}
+}
+footer{margin-top:72px;background:var(--hero);color:var(--hero-ink-2);padding-block:32px;font-size:.88rem}
+footer b{color:#fff}
+</style>
+</head>
+<body>
+
+<nav class="nav" aria-label="Secciones">
+  <div class="wrap">
+    <span class="brand">MEPER <span>· Análisis de landings</span></span>
+    <ul>
+      <li><a href="#estado">Estado actual</a></li>
+      <li><a href="#sst">SST</a></li>
+      <li><a href="#iso">ISO 9001</a></li>
+      <li><a href="#ab">A/B testing</a></li>
+      <li><a href="#embudo">Embudo</a></li>
+      <li><a href="#utm">UTM</a></li>
+      <li><a href="#redes">Redes</a></li>
+    </ul>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <div>
+      <span class="eyebrow">MEPER Consultores · Análisis de comunicación ·24 sep2026</span>
+      <h1>Dos landings hoy, <em>cuatro en la próxima iteración</em></h1>
+      <p class="lead">Lectura de comunicación —mensaje, llamadas a la acción y extensión— de las landings de SST e ISO 9001, y la propuesta para pasar de dos a cuatro: dos variantes por servicio que cambian título y longitud, y que se deciden con datos, no con opiniones. De fondo, el embudo TOFU → MOFU → BOFU con sus canales, ciclo de medición de15 días, etiqueta UTM — y el análisis de redes que lo alimenta.</p>
+      <div class="hero-stats">
+        <div><b>2</b><span>landings actuales</span></div>
+        <div><b>4</b><span>variantes propuestas</span></div>
+        <div><b>15</b><span>días por ciclo</span></div>
+      </div>
+      <div class="hero-cta">
+        <a class="btn p" href="#estado">Ver el estado actual</a>
+        <a class="btn s" href="#ab">Ver las variantes A/B</a>
+      </div>
+    </div>
+
+    <svg class="ab-svg" viewBox="0 0 540 430" role="img" aria-labelledby="ab-t ab-d">
+      <title id="ab-t">De dos landings a cuatro</title>
+      <desc id="ab-d">Las dos landings actuales, SST e ISO, se dividen cada una en dos variantes, A y B, con títulos y longitudes distintos.</desc>
+      <g font-family="Hanken Grotesk, system-ui, sans-serif" font-size="12" font-weight="600" fill="#9fb0c7" text-anchor="middle">
+        <text x="140" y="20">Hoy</text>
+        <text x="400" y="20">Propuesto</text>
+      </g>
+      <rect x="40" y="34" width="200" height="64" rx="12" fill="#16213a" stroke="#5aaed4" stroke-width="1.5"/>
+      <text x="140" y="62" text-anchor="middle" font-family="Archivo, sans-serif" font-size="16" font-weight="800" fill="#ffffff">Landing SST</text>
+      <text x="140" y="84" text-anchor="middle" font-family="Hanken Grotesk, sans-serif" font-size="11.5" fill="#9fb0c7">sst.meper.com.co</text>
+      <rect x="40" y="130" width="200" height="64" rx="12" fill="#16213a" stroke="#5aaed4" stroke-width="1.5"/>
+      <text x="140" y="158" text-anchor="middle" font-family="Archivo, sans-serif" font-size="16" font-weight="800" fill="#ffffff">Landing ISO 9001</text>
+      <text x="140" y="180" text-anchor="middle" font-family="Hanken Grotesk, sans-serif" font-size="11.5" fill="#9fb0c7">iso9001.meper.com.co</text>
+      <g stroke="#5aaed4" stroke-width="1.5" fill="none" opacity=".8">
+        <path d="M244 66 C300 66,300 70,330 70"/>
+        <path d="M244 66 C300 66,300 150,330 150"/>
+        <path d="M244 162 C300 162,300 250,330 250"/>
+        <path d="M244 162 C300 162,300 330,330 330"/>
+      </g>
+      <rect x="334" y="40" width="176" height="60" rx="12" fill="#78b3d9"/>
+      <text x="422" y="66" text-anchor="middle" font-family="Archivo, sans-serif" font-size="14" font-weight="800" fill="#0a1a2c">SST · A · Corta</text>
+      <text x="422" y="87" text-anchor="middle" font-family="Hanken Grotesk, sans-serif" font-size="11" fill="#0a1a2c">~650 palabras · oferta</text>
+      <rect x="334" y="120" width="176" height="60" rx="12" fill="#22406b"/>
+      <text x="422" y="146" text-anchor="middle" font-family="Archivo, sans-serif" font-size="14" font-weight="800" fill="#ffffff">SST · B · Larga</text>
+      <text x="422" y="167" text-anchor="middle" font-family="Hanken Grotesk, sans-serif" font-size="11" fill="#c9d6e8">~1.300 palabras · dolor</text>
+      <rect x="334" y="220" width="176" height="60" rx="12" fill="#78b3d9"/>
+      <text x="422" y="246" text-anchor="middle" font-family="Archivo, sans-serif" font-size="14" font-weight="800" fill="#0a1a2c">ISO · A · Corta</text>
+      <text x="422" y="267" text-anchor="middle" font-family="Hanken Grotesk, sans-serif" font-size="11" fill="#0a1a2c">~650 palabras · oferta</text>
+      <rect x="334" y="300" width="176" height="60" rx="12" fill="#22406b"/>
+      <text x="422" y="326" text-anchor="middle" font-family="Archivo, sans-serif" font-size="14" font-weight="800" fill="#ffffff">ISO · B · Larga</text>
+      <text x="422" y="347" text-anchor="middle" font-family="Hanken Grotesk, sans-serif" font-size="11" fill="#c9d6e8">~1.300 palabras · dolor</text>
+      <rect x="150" y="376" width="240" height="36" rx="10" fill="#ffffff"/>
+      <text x="270" y="399" text-anchor="middle" font-family="Archivo, sans-serif" font-size="13" font-weight="800" fill="#0f172a">Ganadora por tasa de conversión</text>
+    </svg>
+  </div>
+</header>
+
+<main>
+
+<!-- 01 · ESTADO ACTUAL -->
+<section class="blk" id="estado">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">01 · Estado actual</span>
+      <h2>Qué dicen hoy las dos landings</h2>
+      <p>Análisis uno a uno desde la comunicación —no del código—: el mensaje del servicio, el uso real de las llamadas a la acción y la extensión de cada página. Cifras medidas sobre el HTML publicado el24 de septiembre de2026.</p>
+    </div>
+
+    <article class="landing" id="sst">
+      <header class="l-top">
+        <div>
+          <span class="where">Landing1 · SG-SST</span>
+          <h3>«Proteja a su gente con un SG-SST que sí funciona»</h3>
+          <span class="url">sst.meper.com.co · título SEO: «Diagnóstico Gratuito de su SG-SST en Colombia»</span>
+        </div>
+        <div class="chips">
+          <span class="chip main">~1.102 palabras</span>
+          <span class="chip">8 secciones</span>
+          <span class="chip">9 CTAs</span>
+          <span class="chip">3 formularios ·20 campos</span>
+          <span class="chip">57 imágenes</span>
+        </div>
+      </header>
+      <div class="l-body">
+        <div class="mb">
+          <span class="lbl">Mensaje del servicio</span>
+          <ul>
+            <li class="ok">Ángulo de cumplimiento con cifra que duele: <strong>multa de hasta500 SMLMV</strong> (Decreto1072/2015), más cierre de operación, licitación perdida y prima de ARL. Consecuencias concretas, no adjetivos.</li>
+            <li class="ok">Oferta de entrada clara y repetida: <strong>«diagnóstico gratuito, antes de la inspección»</strong>.</li>
+            <li class="ok">Prueba densa: licencia SST de Gobernación de Antioquia, ISO9001 e ISO45001, +12 años, +4.500 empresas, +50.000 horas, logos de clientes y «auditorías reales, no promesas».</li>
+            <li class="warn">El H1 promete «un SG-SST que <strong>sí funciona</strong>», pero el cuerpo vende cumplimiento normativo: nunca se define qué significa «funcionar» (¿cero hallazgos en inspección? ¿menos accidentes?).</li>
+            <li class="warn">H2 duplicado: «Solicite su diagnóstico gratuito» aparece <strong>dos veces</strong>; el escaneo pierde el hilo.</li>
+          </ul>
+        </div>
+        <div class="mb">
+          <span class="lbl">Uso de call to action</span>
+          <ul>
+            <li class="warn">«Escríbenos por WhatsApp» <strong>no abre WhatsApp</strong>: la página solo expone <code>tel:+573245713929</code>. En móvil, el visitante espera un chat y recibe el marcador.</li>
+            <li class="warn">El mismo paso se pide con <strong>cinco redacciones distintas</strong>: «Solicitar diagnóstico», «Ir al formulario de contacto», «Enviar solicitud», «Solicite su diagnóstico gratuito» y «Abrir WhatsApp». Sin jerarquía, no hay un botón claro.</li>
+            <li class="warn">Tres formularios con20 campos en total: fricción alta para tráfico frío.</li>
+            <li class="ok">La oferta «diagnóstico gratuito» funciona como hilo conductor del CTA a lo largo de toda la página.</li>
+          </ul>
+        </div>
+        <div class="mb">
+          <span class="lbl">Extensión</span>
+          <ul>
+            <li class="ok">~1.102 palabras visibles,8 bloques H2 y11 H3,57 imágenes,48 KB de HTML.</li>
+            <li>Recorrido: miedo (5 razones) → proceso → comparación «sin gestión / con MEPER» → evidencia → FAQ → doble cierre. Aproximadamente6–7 pantallas en desktop.</li>
+            <li class="warn">Veredicto: longitud justa para SEO y tráfico templado; para pauta fría en móvil el texto diluye el clic antes de llegar al formulario.</li>
+          </ul>
+        </div>
+      </div>
+    </article>
+
+    <article class="landing" id="iso">
+      <header class="l-top">
+        <div>
+          <span class="where">Landing2 · ISO9001</span>
+          <h3>«ISO9001: su trampolín a los grandes»</h3>
+          <span class="url">iso9001.meper.com.co · título SEO: «Consultoría y Certificación ISO9001 en Colombia»</span>
+        </div>
+        <div class="chips">
+          <span class="chip main">~1.174 palabras</span>
+          <span class="chip">12 secciones</span>
+          <span class="chip">12 CTAs (7 de WhatsApp)</span>
+          <span class="chip">1 formulario ·6 campos</span>
+          <span class="chip">6 imágenes</span>
+        </div>
+      </header>
+      <div class="l-body">
+        <div class="mb">
+          <span class="lbl">Mensaje del servicio</span>
+          <ul>
+            <li class="ok">H1 aspiracional y diferenciado del mercado (los competidores venden «cumplir la norma»).</li>
+            <li class="ok">Mejor insight del par: <strong>«no es un problema de calidad, es que nadie la puede verificar»</strong> — nombra el dolor real, la casilla del pliego de licitación.</li>
+            <li class="ok">Calificación explícita («Es para usted si… / No es para usted si…»): filtra y genera confianza.</li>
+            <li class="warn">El H1 y el cuerpo hablan distinto: el título promete crecimiento, el cuerpo insiste en licitaciones. No se sabe si venden salto de escala o cumplimiento de pliego.</li>
+            <li class="warn">Apertura defensiva: «Esto no es otro artículo genérico sobre ISO9001» suena a webinar, no a servicio.</li>
+          </ul>
+        </div>
+        <div class="mb">
+          <span class="lbl">Uso de call to action</span>
+          <ul>
+            <li class="ok">WhatsApp real con <code>wa.me/573008813854</code> (chat prellenado) y formulario de solo6 campos: <strong>la fricción más baja del par</strong>.</li>
+            <li class="warn"><strong>Siete redacciones del mismo CTA</strong>: «Hablar por WhatsApp», «Quiero mi diagnóstico gratis →», «Escribir por WhatsApp», «Hablar ahora por WhatsApp», «escríbanos por WhatsApp»… Mezcla dos acciones (pedir diagnóstico vs. chatear) sin definir cuál es la principal.</li>
+            <li class="warn">Sin teléfono ni email: quien no usa WhatsApp no tiene salida de contacto.</li>
+            <li class="warn">«Pausar» (control del video) se cuela en el escaneo como si fuera una llamada a la acción.</li>
+          </ul>
+        </div>
+        <div class="mb">
+          <span class="lbl">Extensión</span>
+          <ul>
+            <li class="ok">~1.174 palabras en12 bloques H2: el mismo volumen que SST partido en el doble de secciones.</li>
+            <li>6 imágenes y105 KB de HTML (el doble que SST, por el video embebido).</li>
+            <li class="warn">Veredicto: se lee como lista, no como recorrido. Candidato natural a consolidar de12 a7–8 bloques sin perder argumentos.</li>
+          </ul>
+        </div>
+      </div>
+    </article>
+
+    <div class="cmp-wrap">
+      <table class="cmp">
+        <thead>
+          <tr><th>Criterio</th><th>SST</th><th>ISO9001</th></tr>
+        </thead>
+        <tbody>
+          <tr><th>Ángulo del mensaje</th><td>Miedo calibrado (multa500 SMLMV)</td><td>Oportunidad (licitación / trampolín)</td></tr>
+          <tr><th>Palabras / secciones</th><td>~1.102 /8</td><td>~1.174 /12</td></tr>
+          <tr><th>CTAs únicos</th><td>9 (5 redacciones del mismo)</td><td>12 (7 de WhatsApp)</td></tr>
+          <tr><th>WhatsApp directo (wa.me)</th><td class="bad">No · solo tel:</td><td class="good">Sí · prellenado</td></tr>
+          <tr><th>Formulario</th><td class="bad">3 form ·20 campos</td><td class="good">1 form ·6 campos</td></tr>
+          <tr><th>Teléfono publicado</th><td>+573245713929</td><td>+573008813854</td></tr>
+          <tr><th>Peso HTML</th><td>48 KB</td><td>105 KB (video)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="note"><strong>Tres hallazgos transversales:</strong> las dos landings del mismo sitio publican teléfonos distintos; SST no tiene WhatsApp directo aunque el público vive en WhatsApp; y ninguna tiene GA4 ni GTM — <strong>sin medición no hay A/B posible</strong>, por eso es el paso cero del plan.</p>
+  </div>
+</section>
+
+<!-- 02 · A/B -->
+<section class="blk" id="ab">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">02 · A/B Testing propuestas</span>
+      <h2>De dos landings a cuatro: dos por servicio</h2>
+      <p>Cada servicio hoy tiene una sola landing. La propuesta la parte en dos variantes que cambian <strong>título y extensión</strong>: la A va a pauta fría (corta, oferta inmediata), la B va a orgánico y tráfico que necesita convencerse (larga, recorrido completo). El tráfico se reparte50/50 y la ganadora se elige por tasa de conversión a lead, no por clics.</p>
+    </div>
+
+    <div class="pair">
+      <div class="pair-head">
+        <span class="n">Servicio1 · SG-SST</span>
+        <h3>¿Gana la oferta inmediata o el miedo argumentado con cifras?</h3>
+        <p>Las dos variantes conservan la prueba social y la oferta de diagnóstico gratuito; cambian el orden de entrada y cuánto texto exigen antes del primer clic.</p>
+      </div>
+      <div class="ab">
+        <article class="test">
+          <header><span class="where">SST · Variante A</span><span class="when">Corta · oferta</span></header>
+          <h4 class="v-title">Diagnóstico gratuito de su SG-SST en48 horas</h4>
+          <div class="chips"><span class="chip">~650 palabras</span><span class="chip">6 bloques</span><span class="chip">Pauta fría · móvil</span></div>
+          <ol>
+            <li>Hero: H1 + sub + formulario de4 campos + botón wa.me</li>
+            <li>Qué revisamos: checklist de10 puntos (Res.0312 y Decreto1072)</li>
+            <li>Cómo funciona en4 pasos, con plazos</li>
+            <li>Prueba: licencia, ISO, logos, +12 años</li>
+            <li>FAQ: precio, plazo, modalidad, alcance</li>
+            <li>Cierre: formulario repetido + WhatsApp</li>
+          </ol>
+          <p class="metric"><strong>Hipótesis:</strong> pauta fría en móvil quiere la oferta ya; cada pantalla extra cuesta envíos.</p>
+        </article>
+        <article class="test">
+          <header><span class="where">SST · Variante B</span><span class="when">Larga · dolor</span></header>
+          <h4 class="v-title">500 SMLMV: lo que paga su empresa si la inspección llega sin SG-SST</h4>
+          <div class="chips"><span class="chip">~1.300 palabras</span><span class="chip">9 bloques</span><span class="chip">SEO · referido</span></div>
+          <ol>
+            <li>Hero: H1 con la cifra + sub + CTA</li>
+            <li>Los5 costos reales: multa, cierre, licitación, ARL, costo oculto</li>
+            <li>Qué exige la ley, explicado en lenguaje llano</li>
+            <li>Proceso con plazos (los4 pasos actuales)</li>
+            <li>Comparación «sin gestión vs. con MEPER»</li>
+            <li>Evidencia: auditorías reales, licencia, logos</li>
+            <li>Testimonio o caso breve</li>
+            <li>FAQ («Antes de escribirnos»)</li>
+            <li>Cierre: diagnóstico gratis + WhatsApp</li>
+          </ol>
+          <p class="metric"><strong>Hipótesis:</strong> el dolor con cifra convence a gerencia; la longitud califica en tráfico orgánico y referido.</p>
+        </article>
+      </div>
+      <div class="pair-foot"><strong>Decide:</strong> tasa de visitas → lead (formulario o wa.me) en15 días · desempate: % de leads contactados en24 h.</div>
+    </div>
+
+    <div class="pair">
+      <div class="pair-head">
+        <span class="n">Servicio2 · ISO9001</span>
+        <h3>¿Gana el plazo concreto o el dolor de la licitación perdida?</h3>
+        <p>Ambas variantes unifican el CTA en un solo botón principal (diagnóstico gratis por WhatsApp) y bajan de12 bloques a un recorrido cerrado.</p>
+      </div>
+      <div class="ab">
+        <article class="test">
+          <header><span class="where">ISO · Variante A</span><span class="when">Corta · oferta</span></header>
+          <h4 class="v-title">ISO9001 en90 días: diagnosticamos sus brechas gratis</h4>
+          <div class="chips"><span class="chip">~650 palabras</span><span class="chip">6 bloques</span><span class="chip">Pauta fría · móvil</span></div>
+          <ol>
+            <li>Hero: H1 + sub + wa.me + formulario de4 campos</li>
+            <li>Método en3 pasos: diagnóstico → documentación sin frenar la operación → auditoría sin sorpresas</li>
+            <li>Qué desbloquea: licitaciones y verificabilidad, en2–3 bullets duros</li>
+            <li>Prueba: +12 años, un testimonio, evidencia externa en un párrafo</li>
+            <li>¿Es para usted? versión compacta (sí / no)</li>
+            <li>Cierre: diagnóstico gratis + WhatsApp</li>
+          </ol>
+          <p class="metric"><strong>Hipótesis:</strong> «plazo + gratis» es más accionable que «trampolín»; lo corto gana en pauta.</p>
+        </article>
+        <article class="test">
+          <header><span class="where">ISO · Variante B</span><span class="when">Larga · dolor</span></header>
+          <h4 class="v-title">Cada trimestre sin ISO9001 es una licitación que pierde</h4>
+          <div class="chips"><span class="chip">~1.300 palabras</span><span class="chip">10 bloques</span><span class="chip">SEO · referido</span></div>
+          <ol>
+            <li>Hero: H1 (dolor comercial) + sub de la casilla del pliego + CTA</li>
+            <li>El problema real: nadie puede verificar su calidad</li>
+            <li>Evidencia externa: metaanálisis, costos, exportación</li>
+            <li>Método en3 pasos</li>
+            <li>Antes y después de certificarse</li>
+            <li>Testimonios</li>
+            <li>Para quién es / no es</li>
+            <li>Urgencia: los trimestres perdidos</li>
+            <li>FAQ («Antes de que pregunte»)</li>
+            <li>Cierre: diagnóstico gratis + wa.me + formulario</li>
+          </ol>
+          <p class="metric"><strong>Hipótesis:</strong> abrir con el dolor de licitación filtra al tomador de decisión; la longitud sostiene la compra B2B.</p>
+        </article>
+      </div>
+      <div class="pair-foot"><strong>Decide:</strong> tasa de visitas → lead + % de leads con empresa/NIT reales (calidad, no solo volumen).</div>
+    </div>
+
+    <p class="note"><strong>Condiciones para arrancar:</strong>
+      <ol>
+        <li>Instalar GA4 y GTM con evento de conversión (lead) — sin esto ninguna prueba es medible.</li>
+        <li>Unificar teléfono y WhatsApp en las4 variantes (un solo número, wa.me siempre).</li>
+        <li>Tráfico50/50 por variante, ciclo de15 días o hasta100 conversiones por lado.</li>
+        <li>UTM de seguimiento: <code>utm_content=sst-a | sst-b | iso-a | iso-b</code>.</li>
+      </ol>
+    </p>
+  </div>
+</section>
+
+<!-- 03 · EMBUDO -->
+<section class="blk" id="embudo">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">03 · Estrategia del embudo</span>
+      <h2>TOFU, MOFU y BOFU: qué entra, qué convierte y qué se recupera</h2>
+      <p>Arriba, cuatro canales pagados y el eje orgánico —LinkedIn como protagonista, Shorts y piezas de IG/FB—; en el medio, las cuatro landings propuestas con ciclo de medición de15 días; abajo, el remarketing de quienes se quedaron a medias. Todo el recorrido viaja etiquetado con UTM (sección04).</p>
+    </div>
+
+    <div class="funnel">
+      <svg class="funnel-svg" viewBox="0 0 560 495" role="img" aria-labelledby="fn-t fn-d">
+        <title id="fn-t">Embudo TOFU, MOFU y BOFU</title>
+        <desc id="fn-d">Diagrama del embudo: arriba el tráfico de los canales con UTM, en el medio las cuatro landings A/B con ciclo de15 días y abajo el remarketing a leads silenciosos; el resultado es la reunión agendada.</desc>
+
+        <text x="260" y="30" text-anchor="middle" class="fx" font-size="10" font-weight="700" letter-spacing="1">CANALES CON UTM</text>
+        <path d="M254 40 L260 49 L266 40" class="fx-stroke"/>
+
+        <!-- TOFU -->
+        <polygon points="60,58 460,58 415,170 105,170" fill="#78b3d9"/>
+        <text x="260" y="95" text-anchor="middle" font-family="Archivo, sans-serif" font-size="19" font-weight="800" fill="#0a1a2c">TOFU · Alimentar</text>
+        <text x="260" y="122" text-anchor="middle" font-family="Hanken Grotesk, sans-serif" font-size="11.5" font-weight="600" fill="#0a1a2c">Google Ads · Meta · WhatsApp · Email</text>
+        <text x="260" y="140" text-anchor="middle" font-family="Hanken Grotesk, sans-serif" font-size="11.5" font-weight="600" fill="#0a1a2c">LinkedIn · Shorts YT · Piezas IG/FB</text>
+
+        <!-- MOFU -->
+        <polygon points="105,185 415,185 370,295 150,295" fill="#4a90c2"/>
+        <text x="260" y="222" text-anchor="middle" font-family="Archivo, sans-serif" font-size="19" font-weight="800" fill="#ffffff">MOFU · Convertir</text>
+        <text x="260" y="249" text-anchor="middle" font-family="Hanken Grotesk, sans-serif" font-size="11.5" font-weight="600" fill="#ffffff">4 landings A/B · ciclo de 15 días</text>
+        <text x="260" y="267" text-anchor="middle" font-family="Hanken Grotesk, sans-serif" font-size="11.5" font-weight="600" fill="#ffffff">Remarketing sin contacto → vuelve</text>
+
+        <!-- BOFU -->
+        <polygon points="150,310 370,310 325,420 195,420" fill="#22406b"/>
+        <text x="260" y="347" text-anchor="middle" font-family="Archivo, sans-serif" font-size="17" font-weight="800" fill="#ffffff">BOFU · Cerrar</text>
+        <text x="260" y="374" text-anchor="middle" font-family="Hanken Grotesk, sans-serif" font-size="11.5" font-weight="600" fill="#ffffff">Leads silenciosos</text>
+        <text x="260" y="392" text-anchor="middle" font-family="Hanken Grotesk, sans-serif" font-size="11.5" font-weight="600" fill="#ffffff">Remarketing + email</text>
+
+        <!-- salidas -->
+        <path d="M447 115 H459 M454 110 L461 115 L454 120" class="fx-stroke"/>
+        <text x="470" y="111" class="fx-b">Visitas</text>
+        <text x="470" y="127" class="fx" font-size="10">con UTM</text>
+        <path d="M400 240 H459 M454 235 L461 240 L454 245" class="fx-stroke"/>
+        <text x="470" y="236" class="fx-b">Lead</text>
+        <text x="470" y="252" class="fx" font-size="10">form o wa.me</text>
+        <path d="M355 365 H459 M454 360 L461 365 L454 370" class="fx-stroke"/>
+        <text x="470" y="361" class="fx-b">Reunión</text>
+        <text x="470" y="377" class="fx" font-size="10">reactivación</text>
+
+        <rect x="145" y="447" width="230" height="36" rx="10" class="pill-bg"/>
+        <text x="260" y="470" text-anchor="middle" font-family="Archivo, sans-serif" font-size="13" font-weight="800" class="pill-tx">Cierre · reunión agendada</text>
+      </svg>
+      <p class="small muted funnel-cap">Cada piso baja de volumen y sube de temperatura: el UTM acompaña el clic desde el primer anuncio hasta la reunión, y la variante ganadora se decide en el MOFU a los15 días.</p>
+    </div>
+
+    <div class="lanes">
+      <div class="lane-cols" aria-hidden="true"><span>Etapa</span><span>Canales y activos</span><span>Qué ocurre aquí</span><span>Audiencias de remarketing</span><span>Métrica</span></div>
+
+      <div class="lane t">
+        <div class="stg"><b>TOFU</b><span>Alimentar</span></div>
+        <div>
+          <span class="lbl-m">Canales</span>
+          <p class="small muted" style="margin-bottom:6px"><strong>Pago</strong></p>
+          <div class="chips"><span class="chip main">Google Ads</span><span class="chip main">Meta Ads</span><span class="chip main">WhatsApp Marketing</span><span class="chip main">Email Marketing</span></div>
+          <p class="small muted" style="margin:10px 0 6px"><strong>Orgánico</strong></p>
+          <div class="chips"><span class="chip main">LinkedIn · protagonista</span><span class="chip">Shorts de YouTube</span><span class="chip">Piezas Instagram</span><span class="chip">Piezas Facebook</span></div>
+        </div>
+        <div>
+          <span class="lbl-m">Qué ocurre</span>
+          <p class="small">Todo el tráfico apunta a las cuatro variantes de landing. LinkedIn lidera con su newsletter y su audiencia propia; los Shorts y las piezas de IG/FB respaldan el orgánico con la misma promesa de la landing a la que enlazan: el clic llega con la expectativa ya puesta.</p>
+        </div>
+        <div>
+          <span class="lbl-m">Audiencias</span>
+          <p class="small">Aquí se construyen: quien interactúa con el anuncio y no escribe queda marcado para el remarketing del MOFU.</p>
+        </div>
+        <div>
+          <span class="lbl-m">Métrica</span>
+          <div class="kpi">Visitas</div>
+          <p class="kpi-sub">Visitas con UTM por canal · CPC y CTR</p>
+        </div>
+      </div>
+
+      <div class="lane m">
+        <div class="stg"><b>MOFU</b><span>Convertir</span></div>
+        <div>
+          <span class="lbl-m">Canales y activos</span>
+          <div class="chips"><span class="chip main">SST-A</span><span class="chip main">SST-B</span><span class="chip main">ISO-A</span><span class="chip main">ISO-B</span><span class="chip">Ciclo de15 días</span></div>
+        </div>
+        <div>
+          <span class="lbl-m">Qué ocurre</span>
+          <p class="small">Las cuatro landings ofrecen diagnóstico gratuito; el visitante elige formulario o WhatsApp. Corren50/50 y a los15 días se declara la variante ganadora y se aplica.</p>
+        </div>
+        <div>
+          <span class="lbl-m">Audiencias</span>
+          <p class="small"><strong>Reubicado aquí:</strong> interactuaron con el anuncio pero no escribieron ni llenaron formulario — aún no son leads. El remarketing los devuelve a la landing para convertir.</p>
+        </div>
+        <div>
+          <span class="lbl-m">Métrica</span>
+          <div class="kpi">Lead</div>
+          <p class="kpi-sub">Visitas → lead por variante · ciclo de15 días</p>
+        </div>
+      </div>
+
+      <div class="lane b">
+        <div class="stg"><b>BOFU</b><span>Cerrar</span></div>
+        <div>
+          <span class="lbl-m">Canales y activos</span>
+          <div class="chips"><span class="chip main">Remarketing a leads</span><span class="chip main">WhatsApp de seguimiento</span><span class="chip main">Email de seguimiento</span></div>
+        </div>
+        <div>
+          <span class="lbl-m">Qué ocurre</span>
+          <p class="small">Reactivar a quien escribió y no continuó comunicados: recordatorio de la oferta (diagnóstico gratuito) y agenda con el consultor.</p>
+        </div>
+        <div>
+          <span class="lbl-m">Audiencias</span>
+          <ul>
+            <li>Leads silenciosos: escribieron y no respondieron</li>
+            <li>(Opcional) Formulario abierto y no enviado</li>
+          </ul>
+        </div>
+        <div>
+          <span class="lbl-m">Métrica</span>
+          <div class="kpi">Reunión</div>
+          <p class="kpi-sub">Lead silencioso → conversación reactivada</p>
+        </div>
+      </div>
+    </div>
+
+    <p class="note"><strong>Dónde va cada audiencia de remarketing:</strong>
+      <ol>
+        <li><strong>Interactuaron con anuncios, no escribieron ni llenaron formulario → MOFU</strong> (remarketing de aproximación): nunca llegaron a lead; su conversión es volver a la landing y dejar datos. Meterlos al BOFU enfría la audiencia de cierre con gente que todavía no conoce la oferta.</li>
+        <li><strong>Escribieron y no continuaron comunicados → BOFU</strong>: ya son lead; su conversión es la reunión, no otro clic a la landing.</li>
+        <li><strong>WhatsApp Marketing y Email están en dos etapas</strong>: en el TOFU como tráfico hacia las landings y en el BOFU como seguimiento; se distinguen por <code>utm_campaign</code> (<code>tofu-*</code> vs. <code>bofu-*</code>).</li>
+      </ol>
+    </p>
+  </div>
+</section>
+
+<!-- 04 · UTM -->
+<section class="blk" id="utm">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">04 · Seguimiento UTM</span>
+      <h2>Una etiqueta UTM que garantiza el seguimiento de punta a punta</h2>
+      <p>Regla única: todo enlace que salga de un canal hacia las landings lleva las cinco variables. El formato es el mismo en pago, orgánico y remarketing, así que GA4 puede reconstruir qué canal, qué variante y qué ciclo produjo cada lead.</p>
+    </div>
+
+    <div class="cmp-wrap">
+      <table class="cmp">
+        <thead>
+          <tr><th>Variable</th><th>Valores permitidos</th><th>Ejemplo</th></tr>
+        </thead>
+        <tbody>
+          <tr><th>utm_source</th><td>google · meta · linkedin · youtube · instagram · facebook · email · whatsapp</td><td><code>google</code></td></tr>
+          <tr><th>utm_medium</th><td><code>cpc</code> (Google) · <code>paid_social</code> (Meta pago) · <code>social</code> (orgánico: IG, FB, Shorts, LinkedIn) · <code>newsletter</code> (edición de LinkedIn) · <code>email</code> · <code>whatsapp</code></td><td><code>paid_social</code></td></tr>
+          <tr><th>utm_campaign</th><td><code>etapa-servicio[-ciclo]</code> → <code>tofu-sst</code> · <code>mofu-iso-ciclo1</code> · <code>bofu-react-sst</code> · <code>tofu-linkedin-news</code></td><td><code>mofu-sst-ciclo1</code></td></tr>
+          <tr><th>utm_content</th><td>Variante de landing o creatividad: <code>sst-a</code> · <code>sst-b</code> · <code>iso-a</code> · <code>iso-b</code> (en remarketing se agrega <code>-rmk</code>)</td><td><code>sst-a</code></td></tr>
+          <tr><th>utm_term</th><td>Solo Google Ads: grupo o keyword</td><td><code>+certificacion+iso</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="note"><strong>Cinco reglas:</strong>
+      <ol>
+        <li><strong>Las cinco variables siempre presentes</strong>; <code>utm_term</code> solo en Google Ads. Las que no apliquen se omiten: nunca se inventan valores nuevos.</li>
+        <li><strong><code>utm_content</code> = variante A/B</strong>: el mismo valor de la sección02 (<code>sst-a | sst-b | iso-a | iso-b</code>); GA4 cruza creatividad con conversión sin tablas extra.</li>
+        <li><strong>El prefijo de campaña es la etapa</strong>: <code>tofu-*</code> alimenta, <code>mofu-*</code> convierte, <code>bofu-*</code> reactiva — así WhatsApp y Email aparecen en dos etapas sin mezclarse.</li>
+        <li><strong>Ciclo = campaña</strong>: cada ventana de15 días cierra con <code>-ciclo1</code>, <code>-ciclo2</code>… para comparar variantes sin contaminar períodos.</li>
+        <li><strong>Prerequisito</strong>: GA4 + GTM con eventos <code>lead</code> (formulario) y <code>click_whatsapp</code> (wa.me) como conversión; sin medición el UTM etiqueta pero no demuestra nada.</li>
+      </ol>
+    </p>
+
+    <div class="to-crm" aria-label="Cadena de seguimiento">
+      <span class="node">Clic con UTM</span><span class="arrow">→</span>
+      <span class="node">Landing A/B</span><span class="arrow">→</span>
+      <span class="node">Evento lead (GA4)</span><span class="arrow">→</span>
+      <span class="node">Lead con sus UTM</span><span class="arrow">→</span>
+      <span class="node vx">Informe: canal · variante · ciclo</span>
+    </div>
+  </div>
+</section>
+
+<!-- 05 · REDES -->
+<section class="blk" id="redes">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">05 · Análisis de redes</span>
+      <h2>Redes sociales: quién alimenta el embudo</h2>
+      <p>Lectura de cada plataforma contra el embudo de la sección03: su rol, su lead magnet y el lenguaje que usa hacia las landings. Toda pieza sale con UTM (sección04) y con landing de destino declarada.</p>
+    </div>
+
+    <article class="landing" id="linkedin">
+      <header class="l-top">
+        <div>
+          <span class="where">Redes · LinkedIn</span>
+          <h3>Pasa a ser la protagonista del embudo</h3>
+          <span class="url">Lead magnet: newsletter periódico que dirige con links externos a las landings</span>
+        </div>
+        <div class="chips">
+          <span class="chip main">Rol: protagonista</span>
+          <span class="chip">Newsletter periódico</span>
+          <span class="chip">Doble vía: post + email</span>
+        </div>
+      </header>
+      <div class="l-body">
+        <div class="mb">
+          <span class="lbl">Dónde está hoy</span>
+          <ul>
+            <li class="warn">Sin rol definido en el embudo: no alimenta landings ni tiene una cadencia de publicación que podamos atribuir con UTM.</li>
+          </ul>
+        </div>
+        <div class="mb">
+          <span class="lbl">La apuesta</span>
+          <ul>
+            <li class="ok">Se convierte en el <strong>portavoz experta</strong> de la marca a través de un <strong>newsletter periódico</strong> con frecuencia fija (semanal o quincenal).</li>
+            <li class="ok">Cada edición se publica en LinkedIn y llega por email a los suscriptores: <strong>doble distribución</strong> con un solo contenido.</li>
+            <li class="ok">Cierra siempre con <strong>links externos a las landings</strong>: la edición promueve el servicio que toca, no vende dentro del post.</li>
+          </ul>
+        </div>
+        <div class="mb">
+          <span class="lbl">Rol en el embudo</span>
+          <ul>
+            <li>TOFU con audiencia propia: genera visitas sin depender de pauta y con el tema ya calentado.</li>
+            <li class="ok">Métrica: suscriptores del newsletter → clics a landing (<code>utm_source=linkedin</code>, <code>utm_medium=newsletter</code>).</li>
+          </ul>
+        </div>
+      </div>
+    </article>
+
+    <article class="landing" id="youtube">
+      <header class="l-top">
+        <div>
+          <span class="where">Redes · YouTube</span>
+          <h3>Gancho en5 segundos, no formato largo</h3>
+          <span class="url">El largo busca monetización del canal — que no es nuestro caso</span>
+        </div>
+        <div class="chips">
+          <span class="chip main">Atención: se pierde a1 s</span>
+          <span class="chip">Gancho: primeros5 s</span>
+          <span class="chip">Formato: Shorts</span>
+          <span class="chip">CTA sugerido a landing</span>
+        </div>
+      </header>
+      <div class="l-body">
+        <div class="mb">
+          <span class="lbl">Por qué cambia</span>
+          <ul>
+            <li class="warn">Hoy estamos concentrados en el formato largo. Esa insistencia busca <strong>monetización del canal — que no es nuestro caso</strong>—; marketing necesita captar necesidades, no vistas de minutos.</li>
+            <li class="warn">Los estudios más recientes indican que <strong>la atención se pierde después de1 segundo</strong>.</li>
+          </ul>
+        </div>
+        <div class="mb">
+          <span class="lbl">La regla del short</span>
+          <ul>
+            <li class="ok">El espectador debe quedar <strong>atrapado en los primeros5 segundos</strong>: hook con la necesidad o la consecuencia (multa, licitación perdida), no con la marca.</li>
+            <li class="ok">El short debe <strong>referir de manera sugerida a una landing</strong>: mención verbal + link en descripción y comentario fijo, sin romper el ritmo del video.</li>
+          </ul>
+        </div>
+        <div class="mb">
+          <span class="lbl">Rol en el embudo</span>
+          <ul>
+            <li>TOFU orgánico: cada short enlaza a la landing del servicio del que habla (<code>utm_source=youtube</code>, <code>utm_medium=social</code>).</li>
+            <li>El formato largo queda como soporte de profundidad, no como canal de captación.</li>
+            <li class="ok">Métrica: reproducciones → clics a landing.</li>
+          </ul>
+        </div>
+      </div>
+    </article>
+
+    <article class="landing" id="igfb">
+      <header class="l-top">
+        <div>
+          <span class="where">Redes · Instagram y Facebook</span>
+          <h3>Concentrarse en el servicio y hablar como las landings</h3>
+          <span class="url">Parrilla mes a mes: intención de marca, intención de lead magnet y contenido diferenciado</span>
+        </div>
+        <div class="chips">
+          <span class="chip main">Parrilla mensual</span>
+          <span class="chip">Lenguaje = landings</span>
+          <span class="chip">Intención de marca</span>
+          <span class="chip">Lead magnet claro</span>
+        </div>
+      </header>
+      <div class="l-body">
+        <div class="mb">
+          <span class="lbl">La apuesta</span>
+          <ul>
+            <li class="ok"><strong>Concentrarse en el servicio</strong>: la parrilla gira alrededor de SST e ISO9001, no de contenido genérico de atracción.</li>
+            <li class="ok"><strong>Lenguaje alineado con las landings</strong>: mismas promesas, mismos términos y mismo tono — el salto de la pieza a la landing no rompe el hilo.</li>
+          </ul>
+        </div>
+        <div class="mb">
+          <span class="lbl">Cómo se programa</span>
+          <ul>
+            <li class="ok">Comenzar a programar la <strong>parrilla mes a mes</strong> con tres decisiones fijas por pieza: <strong>intención de marca</strong>, <strong>intención de lead magnet</strong> clara y <strong>diferenciación del contenido</strong> (qué es servicio, qué es prueba, qué es conversión — y qué se publica en IG frente a FB).</li>
+            <li class="ok">Cada pieza declara a qué landing lleva; si no tiene destino, no entra en la parrilla.</li>
+          </ul>
+        </div>
+        <div class="mb">
+          <span class="lbl">Rol en el embudo</span>
+          <ul>
+            <li>TOFU orgánico: <code>utm_source=instagram|facebook</code>, <code>utm_medium=social</code>.</li>
+            <li class="ok">Métrica: visitas a landing por pieza y por intención (marca vs. lead magnet).</li>
+          </ul>
+        </div>
+      </div>
+    </article>
+
+    <p class="note"><strong>Regla de filtro:</strong> toda pieza de red nace con landing de destino y UTM; si no lleva a una landing o no se puede medir, no entra en la parrilla. <strong>LinkedIn marca el ritmo</strong>: su newsletter decide qué servicio se promueve cada semana y las demás redes acompañan esa misma conversación.</p>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap"><b>MEPER Consultores</b> · Análisis de landings y pruebas A/B. Las cifras de palabras, secciones y CTAs se midieron sobre el HTML publicado el24 sep2026; las hipótesis de conversión son supuestos de arranque que se recalibran con los datos reales del primer ciclo de15 días.</div>
+</footer>
+
+</body>
+</html>
